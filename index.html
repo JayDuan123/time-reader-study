@@ -33,6 +33,9 @@ button:focus-visible,img:focus-visible{outline:2px solid var(--hema);outline-off
 .crit dt{font-weight:700}.crit dd{margin:0;min-width:0}
 .readers{display:flex;flex-wrap:wrap;gap:8px}
 .primary{background:var(--hema);color:var(--bg);border:0;border-radius:6px;padding:10px 18px;font-weight:700}
+.pwform{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pwform input{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 12px;min-width:0}
+#pwmsg{color:var(--bad);min-height:1.5em;margin-top:8px}
 .ghost{background:transparent;border:1px solid var(--line);border-radius:6px;padding:8px 14px}
 /* bar */
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;justify-content:space-between}
@@ -109,7 +112,7 @@ function marked(t){
   out.push(t.slice(i));return out;
 }
 const app = document.getElementById("app");
-let hl=true, reader=null, idx=0, tab="A", zoom=false, boxes=null, data={}, saveState="";
+let key="", hl=true, reader=null, idx=0, tab="A", zoom=false, boxes=null, data={}, saveState="";
 let timers={};
 const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[n,v]of Object.entries(a)){if(n==="on")for(const[x,f]of Object.entries(v))e.addEventListener(x,f);else if(n==="class")e.className=v;else if(n==="text")e.textContent=v;else e.setAttribute(n,v)}e.append(...k.filter(x=>x!=null));return e};
 const store=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
@@ -129,17 +132,29 @@ function save(n){
   clearTimeout(timers[n]);
   timers[n]=setTimeout(async()=>{
     if(!ENDPOINT){saveState="Saved in this browser. Download your ratings when you finish.";paintSave();return}
-    try{const r=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({reader,case:n,rating:data[n]})});const j=await r.json();if(!j.ok)throw 0;saveState="Saved"}
+    try{const r=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({reader,key,case:n,rating:data[n]})});const j=await r.json();if(!j.ok)throw 0;saveState="Saved"}
     catch(e){saveState="Could not reach the server. Your ratings are kept in this browser; use Download my ratings."}
     paintSave();
   },500);
 }
 function paintSave(){const s=document.getElementById("save");if(s)s.textContent=saveState}
 
-async function choose(r){
-  reader=r;data=store("rs3_"+r)||{};
-  if(ENDPOINT)try{const q=await fetch(ENDPOINT+"?reader="+r);if(q.ok){const d=await q.json();for(const k in d)if(!data[k])data[k]=d[k]}}catch(e){}
+async function choose(r,pw=""){
+  const msg=document.getElementById("pwmsg");
+  let saved={};
+  if(ENDPOINT)try{
+    const q=await fetch(ENDPOINT+"?reader="+r+"&key="+encodeURIComponent(pw));saved=await q.json();
+    if(saved.error){if(msg)msg.textContent="That password is not correct.";return}
+  }catch(e){if(msg)msg.textContent="Could not check the password. Please check your connection and try again.";return}
+  reader=r;key=pw;data=store("rs3_"+r)||{};
+  for(const n in saved)if(!data[n])data[n]=saved[n];
   idx=CASES.findIndex(c=>progress(c)<1);if(idx<0)idx=0;tab="A";render();
+}
+function askPw(r,name){
+  const box=document.getElementById("pwbox");
+  const inp=el("input",{id:"pw",type:"password",autocomplete:"off","aria-label":"Password for "+name});
+  box.replaceChildren(el("form",{class:"pwform",on:{submit:e=>{e.preventDefault();choose(r,inp.value)}}},el("label",{for:"pw",text:"Password for "+name}),inp,el("button",{class:"primary",type:"submit",text:"Continue"})),el("p",{id:"pwmsg",role:"alert"}));
+  inp.focus();
 }
 
 function seg(label,val,set){
@@ -160,7 +175,7 @@ function start(){
       el("dt",{text:"Preference"}),el("dd",{text:"Which model's reasoning would you rather use as a reference while reading this field?"})),
     el("p",{text:"The mIF image shows only the markers the question needs, and its legend is printed below it. The two images show the same cells: moving the pointer over one marks the same spot on the other. Please do not discuss your ratings with the other reader. Your ratings are saved as you go, so you can stop at any time and come back later using the same link."}),
     el("h2",{text:"Who is reading?"}),
-    el("div",{class:"readers"},...READERS.map(([k,t])=>el("button",{class:k==="trial"?"ghost":"primary",type:"button",text:t,on:{click:()=>choose(k)}})))));
+    el("div",{class:"readers"},...READERS.map(([k,t])=>el("button",{class:k==="trial"?"ghost":"primary",type:"button",text:t,on:{click:()=>k==="trial"?choose(k):askPw(k,t)}}))),el("div",{id:"pwbox"})));
 }
 
 function stage(src,alt,c){
