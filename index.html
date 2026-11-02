@@ -150,6 +150,10 @@ function seg(label,val,set){
 function start(){
   app.replaceChildren(el("div",{class:"start"},
     el("h1",{text:"Reading machine reasoning on same-section H&E and mIF"}),
+    el("h2",{text:"About this study"}),
+    el("p",{text:"This study asks whether AI models can explain their reading of the tumor immune microenvironment in a way that readers find correct and useful. The models see an H&E image and a multiplex immunofluorescence (mIF) image of the same tissue section, then answer questions on readouts such as CD8⁺ T-cell density and the Ki67 index. Because both stains come from the same section, each intermediate value in a model's reasoning can be compared with cell-level measurements."}),
+    el("p",{text:"The images come from a published research cohort of colorectal cancer. This is a research evaluation, not a clinical validation. Ratings are stored by reader number and will be reported in aggregate in a research paper."}),
+    el("h2",{text:"What you will do"}),
     el("p",{text:"You will review 10 fields of colorectal cancer, each 112 × 112 µm. For each field, two AI models, shown as Model A and Model B, answered the same question and wrote out their reasoning. Please judge the reasoning against the images and the ground truth shown beside them. The ground truth comes from the cell-level measurements on the same section."}),
     el("dl",{class:"crit"},
       ...QS.flatMap(q=>[el("dt",{text:q[1]}),el("dd",{text:q[2]})]),
